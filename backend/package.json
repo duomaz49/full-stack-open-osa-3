@@ -1,0 +1,28 @@
+{
+  "name": "full-stack-open-osa-3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "    \"test\": \"echo \\\"Error: no test specified\\\" && exit 1\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/duomaz49/full-stack-open-osa-3.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/duomaz49/full-stack-open-osa-3/issues"
+  },
+  "homepage": "https://github.com/duomaz49/full-stack-open-osa-3#readme",
+  "dependencies": {
+    "express": "^4.21.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.8"
+  }
+}
