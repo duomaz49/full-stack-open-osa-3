@@ -25,7 +25,7 @@ app.get("/api/persons", (req, res) => {
   });
 });
 
-app.get("/api/persons/:id", (req, res) => {
+app.get("/api/persons/:id", (req, res, next) => {
   const id = req.params.id;
   Person.findById(id)
     .then((person) => {
@@ -36,11 +36,11 @@ app.get("/api/persons/:id", (req, res) => {
       }
     })
     .catch((e) => {
-      res.status(500).json({ error: "Error occurred while fetching person" });
+      next(e);
     });
 });
 
-app.post("/api/persons", (req, res) => {
+app.post("/api/persons", (req, res, next) => {
   const body = req.body;
 
   if (!body.name) {
@@ -70,20 +70,14 @@ app.post("/api/persons", (req, res) => {
     .save()
     .then((savedPerson) => res.json(savedPerson))
     .catch((e) => {
-      if (e.name === "MongoError" && e.code === 11000) {
-        return res.status(400).json({
-          error: "Persons name must be unique",
-        });
-      }
-      res.status(500).json({
-        error: "An error occurred while saving the person",
-      });
+      next(e);
     });
 });
 
-app.put("/api/persons/:id", (req, res) => {
+app.put("/api/persons/:id", (req, res, next) => {
   const id = req.params.id;
   const { name, number } = req.body;
+  
   if (!name || !number) {
     return res.status(400).json({ error: "name or number is missing" });
   }
@@ -106,7 +100,7 @@ app.put("/api/persons/:id", (req, res) => {
       }
     })
     .catch((e) => {
-      res.status(500).json({ error: "Error occured while updating person" });
+      next(e);
     });
 });
 
@@ -114,6 +108,22 @@ app.delete("/api/persons/:id", (req, res) => {
   const id = req.params.id;
   Person.deleteOne({ _id: id }).then(() => res.status(204).end());
 });
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    return response.status(400).json({ error: error.message });
+  } else if (error.name === "MongoError" && error.code === 11000) {
+    return response.status(400).json({ error: "Persons name must be unique" });
+  }
+
+  next(error);
+};
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
