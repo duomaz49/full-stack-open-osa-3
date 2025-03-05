@@ -1,6 +1,8 @@
+require("dotenv").config();
 const express = require("express");
 const generateId = require("./helper");
 const morgan = require("morgan");
+const Person = require("./models/person");
 
 const app = express();
 
@@ -12,51 +14,30 @@ app.use(express.static("dist"));
 
 app.use(express.json());
 
-let persons = [
-  {
-    name: "Arto Hellas",
-    number: "040-123456",
-    id: "1",
-  },
-  {
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-    id: "2",
-  },
-  {
-    name: "Dan Abramov",
-    number: "12-43-234345",
-    id: "3",
-  },
-  {
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-    id: "4",
-  },
-];
-
 app.get("/info", (req, res) => {
   res.send(`<p>Phonebook has info of ${persons.length} people</br>
         <p>${new Date().toString()}</p>`);
 });
 
 app.get("/api/persons", (req, res) => {
-  res.json(persons);
+  Person.find({}).then((persons) => {
+    res.json(persons);
+  });
 });
 
 app.get("/api/persons/:id", (req, res) => {
   const id = req.params.id;
-  const person = persons.find((person) => person.id === id);
-  if (person) {
-    return res.json(person);
-  } else {
-    return res
-      .status(404)
-      .json({
-        error: "Person with id not found",
-      })
-      .end();
-  }
+  Person.findById(id)
+    .then((person) => {
+      if (person) {
+        res.json(person);
+      } else {
+        res.status(404).json({ error: "Person with id not found" });
+      }
+    })
+    .catch((e) => {
+      res.status(500).json({ error: "Error occurred while fetching person" });
+    });
 });
 
 app.post("/api/persons", (req, res) => {
@@ -80,49 +61,61 @@ app.post("/api/persons", (req, res) => {
     });
   }
 
-  const person = {
+  const newPerson = new Person({
     name: body.name,
     number: body.number,
-    id: generateId(persons),
-  };
+  });
 
-  if (persons.some((p) => p.name === person.name)) {
-    return res.status(400).json({
-      error: "Persons name must be unique",
+  newPerson
+    .save()
+    .then((savedPerson) => res.json(savedPerson))
+    .catch((e) => {
+      if (e.name === "MongoError" && e.code === 11000) {
+        return res.status(400).json({
+          error: "Persons name must be unique",
+        });
+      }
+      res.status(500).json({
+        error: "An error occurred while saving the person",
+      });
     });
-  }
-
-  persons = persons.concat(person);
-
-  res.json(person);
 });
 
 app.put("/api/persons/:id", (req, res) => {
   const id = req.params.id;
-  const person = persons.find((p) => p.id === id);
-
-  if (!person) {
-    return res.status(404).json({ error: "Person not found" });
+  const { name, number } = req.body;
+  if (!name || !number) {
+    return res.status(400).json({ error: "name or number is missing" });
   }
 
   const updatedPerson = {
-    ...person,
-    name: req.body.name,
+    name,
+    number,
   };
 
-  persons = persons.map((p) => (p.id !== id ? p : updatedPerson));
-
-  res.json(updatedPerson);
+  Person.findByIdAndUpdate(id, updatedPerson, {
+    new: true,
+    runValidators: true,
+    context: "query",
+  })
+    .then((result) => {
+      if (result) {
+        res.json(result);
+      } else {
+        res.status(404).json({ error: "Person not found" });
+      }
+    })
+    .catch((e) => {
+      res.status(500).json({ error: "Error occured while updating person" });
+    });
 });
 
 app.delete("/api/persons/:id", (req, res) => {
   const id = req.params.id;
-  persons = persons.filter((person) => person.id !== id);
-
-  res.status(204).end();
+  Person.deleteOne({ _id: id }).then(() => res.status(204).end());
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
