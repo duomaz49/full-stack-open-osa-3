@@ -52,11 +52,10 @@ const App = () => {
         return;
       }
     }
-    service
-      .addPersonToDb(newPerson, setMessage)
-      .then((dbPerson) =>
-        setPersons((prevPersons) => [...prevPersons, dbPerson])
-      );
+    service.addPersonToDb(newPerson, setMessage).then((dbPerson) => {
+      if (dbPerson === undefined) return;
+      setPersons((prevPersons) => [...prevPersons, dbPerson]);
+    });
     setName("");
     setNumber("");
   };

@@ -37,6 +37,12 @@ const addPersonToDb = (newPerson, setMessage) => {
       }
     })
     .catch((e) => {
+      if (e.response.data.error) {
+        return setMessage({
+          message: `${e.response.data.error}`,
+          isSuccess: false,
+        });
+      }
       setMessage({
         message: `Error adding '${newPerson.name}' to server`,
         isSuccess: false,
